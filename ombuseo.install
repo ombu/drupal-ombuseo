@@ -1,0 +1,57 @@
+<?php
+
+/**
+ * @file
+ *
+ * Install file for OmbuSEO module.
+ */
+
+/**
+ * Implements hook_schema().
+ */
+function ombuseo_schema() {
+
+    $schema['ombuseo'] = array(
+        'description' => 'Stores SEO information for nodes',
+        'fields' => array(
+            'nid' => array(
+                'description' => 'Node NID',
+                'type' => 'int',
+                'unsigned' => TRUE,
+                'not null' => TRUE,
+            ),
+            'meta_title' => array(
+                'description' => 'Meta title',
+                'type' => 'varchar',
+                'length' => 255,
+                'not null' => TRUE,
+                'default' => '',
+            ),
+            'meta_keywords' => array(
+                'description' => 'Meta Keywords',
+                'type' => 'varchar',
+                'length' => 255,
+                'not null' => TRUE,
+                'default' => '',
+            ),
+            'meta_description' => array(
+                'description' => 'Email address of the contact',
+                'type' => 'text',
+                'size' => 'medium',
+                'not null' => TRUE,
+            ),
+        ),
+        'primary key' => array('nid'),
+    );
+
+    return $schema;
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function ombuseo_uninstall() {
+  foreach (node_type_get_types() as $node_type) {
+      variable_del('ombuseo_node_' . $node_type);
+  }
+}
