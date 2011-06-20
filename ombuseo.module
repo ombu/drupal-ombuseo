@@ -1,154 +1,115 @@
 <?php
 
-/**
- * @file
- *
- * Provides custom title and meta tags for node pages.
- */
-
 /****
  * HOOKS
  */
 
 /**
- * Implements hook_menu().
+ * Implementation of hook_menu()
  */
 function ombuseo_menu() {
-  $items = array();
-
-  $items['admin/config/search/ombuseo'] = array(
-    'title' => 'OMBU SEO Settings',
-    'description' => 'Configure per node type SEO settings.',
-    'access arguments' => array('configure ombuseo'),
-    'page callback' => 'drupal_get_form',
-    'page arguments' => array('ombuseo_settings_form'),
-  );
-
-  return $items;
-}
-
-/**
- * Implements hook_permission().
- */
-function ombuseo_permission() {
-  return array(
-    'configure ombuseo' => array(
-      'title' => t('Configure OmbuSEO'),
-    ),
-    'edit ombuseo fields' => array(
-      'title' => t('Edit OmbuSEO fields'),
-    ),
-  );
-}
-
-/**
- * Implements hook_form_BASE_FORM_ID_alter().
- */
-function ombuseo_form_node_form_alter(&$form, $form_state) {
-  if (user_access('edit ombuseo fields') && variable_get('ombuseo_node_' . $form['type']['#value'], 0)) {
-    $ombuseo = ombuseo_load($form['nid']['#value']);
-
-    $form['ombuseo'] = array(
-      '#type' => 'fieldset',
-      '#title' => 'SEO',
-      '#collapsed' => TRUE,
-      '#collapsible' => TRUE,
-      '#tree' => TRUE,
-      'meta_title' => array(
-        '#title' => 'Alternate Page Title',
-        '#description' => 'The alternate title is only used in the HTML &lt;title&gt; tag. If not set, the regular title will be used.',
-        '#type' => 'textfield',
-        '#default_value' => isset($ombuseo['meta_title']) ? $ombuseo['meta_title'] : '0',
-      ),
-      'meta_description' => array(
-        '#title' => 'Meta Description',
-        '#description' => 'Enter the meta description for this content.',
-        '#type' => 'textfield',
-        '#default_value' => isset($ombuseo['meta_description']) ? $ombuseo['meta_description'] : '0',
-      ),
-      'meta_keywords' => array(
-        '#title' => 'Meta Keywords',
-        '#description' => 'Comma-separated list of meta keywords such as: blue, smurf, sky.',
-        '#type' => 'textfield',
-        '#default_value' => isset($ombuseo['meta_keywords']) ? $ombuseo['meta_keywords'] : '0',
-      ),
+    $items = array();
+    $items['admin/settings/ombuseo'] = array(
+        'title' => 'OMBU SEO Settings',
+		'access arguments' => array('configure ombuseo'),
+		'page callback' => 'drupal_get_form',
+		'page arguments' => array('ombuseo_settings_form'),
     );
 
-  }
+    return $items;
 }
 
 /**
- * Implements hook_node_insert().
+ * Implementation of hook_perm()
  */
-function ombuseo_node_insert($node) {
-  if (isset($node->ombuseo) && user_access('edit ombuseo fields')) {
-    $obj = new stdClass();
-    $obj->nid = $node->nid;
-    foreach (array('meta_title', 'meta_description', 'meta_keywords') as $field) {
-      $obj->{$field} = $node->ombuseo[$field];
-    }
-    ombuseo_save($obj);
-  }
+function ombuseo_perm() {
+    return array(
+        'configure ombuseo',
+        'edit ombuseo fields',
+    );
 }
 
 /**
- * Implements hook_node_update().
+ * Implementation of hook_form_alter()
  */
-function ombuseo_node_update($node) {
-  if (isset($node->ombuseo) && user_access('edit ombuseo fields')) {
-    $obj = new stdClass();
-    $obj->nid = $node->nid;
-    foreach (array('meta_title', 'meta_description', 'meta_keywords') as $field) {
-      $obj->{$field} = $node->ombuseo[$field];
+function ombuseo_form_alter(&$form, $form_state, $form_id) {
+    if ($form['#id'] == 'node-form' && user_access('edit ombuseo fields') && variable_get('ombuseo_node_'.$form['type']['#value'], 0)) {
+
+        $ombuseo = ombuseo_load($form['nid']['#value']);
+
+        $form['ombuseo'] = array(
+            '#type' => 'fieldset',
+            '#title' => 'SEO',
+            '#collapsed' => TRUE,
+            '#tree' => TRUE,
+            'meta_title' => array(
+                '#title' => 'Alternate Page Title',
+                '#description' => 'The alternate title is only used in the HTML &lt;title&gt; tag. If not set, the regular title will be used.',
+                '#type' => 'textfield',
+                '#default_value' => isset($ombuseo['meta_title']) ? $ombuseo['meta_title'] : '0',
+            ),
+            'meta_description' => array(
+                '#title' => 'Meta Description',
+                '#description' => 'Enter the meta description for this content.',
+                '#type' => 'textfield',
+                '#default_value' => isset($ombuseo['meta_description']) ? $ombuseo['meta_description'] : '0',
+            ),
+            'meta_keywords' => array(
+                '#title' => 'Meta Keywords',
+                '#description' => 'Comma-separated list of meta keywords such as: blue, smurf, sky.',
+                '#type' => 'textfield',
+                '#default_value' => isset($ombuseo['meta_keywords']) ? $ombuseo['meta_keywords'] : '0',
+            ),
+        );
+
     }
-    ombuseo_save($obj);
-  }
 }
 
 /**
- * Implements hook_preprocess_node().
+ * Implementation of hook_nodeapi()
+ */
+function ombuseo_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL) {
+    switch ($op) {
+        case 'insert':
+        case 'update':
+            if (isset($node->ombuseo) && user_access('edit ombuseo fields')) {
+                $obj = new stdClass();
+                $obj->nid = $node->nid;
+                foreach (array('meta_title', 'meta_description', 'meta_keywords') as $field) {
+                    $obj->{$field} = $node->ombuseo[$field];
+                }
+                ombuseo_save($obj);
+            }
+            break;
+    }
+}
+
+/**
+ * Implementation of hook_preprocess_node()
  */
 function ombuseo_preprocess_node(&$vars) {
-  if (node_is_page($vars['node']) && variable_get('ombuseo_node_' . $vars['node']->type, 0)) {
-    $ombuseo = ombuseo_load($vars['node']->nid);
-
-    if (!empty($ombuseo['meta_title'])) {
-      ombuseo_meta_title($ombuseo['meta_title']);
+    if ($vars['page'] && variable_get('ombuseo_node_'.$vars['node']->type, 0)) {
+        $ombuseo = ombuseo_load($vars['node']->nid);
+        if (!empty($ombuseo['meta_title'])) {
+            ombuseo_meta_title($ombuseo['meta_title']);
+        }
+        if (!empty($ombuseo['meta_description'])) {
+            drupal_set_html_head('<meta name="description" content="'. str_replace('"', '', $ombuseo['meta_description']) .'" />');
+        }
+        if (!empty($ombuseo['meta_keywords'])) {
+            drupal_set_html_head('<meta name="keywords" content="'. str_replace('"', '', $ombuseo['meta_description']) .'" />');
+        }
     }
-
-    if (!empty($ombuseo['meta_description'])) {
-      $meta_description = array(
-        '#type' => 'html_tag',
-        '#tag' => 'meta',
-        '#attributes' => array(
-          'name' => 'description',
-          'content' => $ombuseo['meta_description'],
-        ),
-      );
-      drupal_add_html_head($meta_description, 'meta_description');
-    }
-    if (!empty($ombuseo['meta_keywords'])) {
-      $meta_keywords = array(
-        '#type' => 'html_tag',
-        '#tag' => 'meta',
-        '#attributes' => array(
-          'name' => 'keywords',
-          'content' => $ombuseo['meta_keywords'],
-        ),
-      );
-      drupal_add_html_head($meta_keywords, 'meta_keywords');
-    }
-  }
 }
 
 /**
- * Implements hook_preprocess_html().
+ * Implementatino of hook_preprocess_page()
  */
-function ombuseo_preprocess_html(&$vars) {
-  $meta_title = ombuseo_meta_title();
-  if ($meta_title) {
-    $vars['head_title'] =  $meta_title . ' | ' . variable_get('site_name', 'Drupal');
-  }
+function ombuseo_preprocess_page(&$vars) {
+    $meta_title = ombuseo_meta_title();
+    if ($meta_title) {
+        $vars['head_title'] =  $meta_title .' | '. variable_get('site_name', 'Drupal');
+    }
 }
 
 
@@ -161,26 +122,26 @@ function ombuseo_preprocess_html(&$vars) {
  */
 function ombuseo_settings_form() {
 
-  $form = array(
-    'instructions' => array(
-      '#markup' => '<p>Select the node types to use OMBU SEO',
-    ),
-  );
-
-  foreach (node_type_get_types() as $node_type) {
-    $form['ombuseo_node_' . $node_type->type] = array(
-      '#title' => $node_type->name,
-      '#type' => 'checkbox',
-      '#default_value' => variable_get('ombuseo_node_' . $node_type->type, 0),
+    $form = array(
+        'instructions' => array(
+            '#value' => '<p>Select the node types to use OMBU SEO',
+        ),
     );
-  }
 
-  $form = system_settings_form($form);
+    foreach (node_get_types() as $node_type) {
+        $form['ombuseo_node_'. $node_type->type] = array(
+            '#title' => $node_type->name,
+            '#type' => 'checkbox',
+            '#default_value' => variable_get('ombuseo_node_'. $node_type->type, 0),
+        );
+    }
 
-  unset($form['buttons']['reset']);
-  $form['buttons']['submit']['#value'] = 'Save';
+    $form = system_settings_form($form);
 
-  return $form;
+    unset($form['buttons']['reset']);
+    $form['buttons']['submit']['#value'] = 'Save';
+
+    return $form;
 }
 
 
@@ -196,15 +157,15 @@ function ombuseo_settings_form() {
  *   an array with empty values
  */
 function ombuseo_load($nid) {
-  $row = db_query("SELECT * FROM {ombuseo} WHERE nid = :nid", array(':nid' => $nid))->fetchAssoc();
-  if (!$row) {
-    $row = array(
-      'meta_title' => '',
-      'meta_description' => '',
-      'meta_keywords' => '',
-    );
-  }
-  return $row;
+    $row = db_fetch_array(db_query("SELECT * FROM {ombuseo} WHERE nid = %d", $nid));
+    if (!$row) {
+        $row = array(
+            'meta_title' => '',
+            'meta_description' => '',
+            'meta_keywords' => '',
+        );
+    }
+    return $row;
 }
 
 /**
@@ -213,33 +174,33 @@ function ombuseo_load($nid) {
  * @param $ombuseo_obj Object to save
  */
 function ombuseo_save(&$ombuseo_obj) {
-  if (!isset($ombuseo_obj->nid)) {
-    watchdog('ombuseo', 'Attempted to save entries to ombuseo without valid NID', NULL, WATCHDOG_ERROR);
-    return FALSE;
-  }
+    if (!isset($ombuseo_obj->nid)) {
+        watchdog('ombuseo', 'Attempted to save entries to ombuseo without valid NID', NULL, WATCHDOG_ERROR);
+        return FALSE;
+    }
 
-  $exists = db_query("SELECT nid FROM {ombuseo} WHERE nid = :nid", array(':nid' => $ombuseo_obj->nid))->fetchField();
+    $exists = db_result(db_query("SELECT nid FROM {ombuseo} WHERE nid = %d", $ombuseo_obj->nid));
 
-  // Update
-  if ($exists) {
-    $result = drupal_write_record('ombuseo', $ombuseo_obj, 'nid');
-  }
-  // Create
-  else {
-    $result = drupal_write_record('ombuseo', $ombuseo_obj);
-  }
-  return $result;
+    // Update
+    if ($exists) {
+        $result = drupal_write_record('ombuseo', $ombuseo_obj, 'nid');
+    }
+    // Create
+    else {
+        $result = drupal_write_record('ombuseo', $ombuseo_obj);
+    }
+    return $result;
 }
 
 /**
  * Holds values for the head <title> tag between node preprocess & page preprocess
  */
 function ombuseo_meta_title($new_value = FALSE) {
-  static $value = NULL;
+    static $value = NULL;
 
-  if ($new_value) {
-    $value = $new_value;
-  }
+    if ($new_value) {
+        $value = $new_value;
+    }
 
-  return $value;
+    return $value;
 }
