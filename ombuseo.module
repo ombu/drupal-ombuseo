@@ -54,6 +54,10 @@ function ombuseo_form_node_form_alter(&$form, $form_state) {
       '#collapsed' => TRUE,
       '#collapsible' => TRUE,
       '#tree' => TRUE,
+      '#group' => 'additional_settings',
+      '#attributes' => array(
+        'class' => array('ombuseo-settings-form'),
+      ),
       'meta_title' => array(
         '#title' => 'Alternate Page Title',
         '#description' => 'The alternate title is only used in the HTML &lt;title&gt; tag. If not set, the regular title will be used.',
