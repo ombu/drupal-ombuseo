@@ -14,8 +14,15 @@ function ombuseo_schema() {
     $schema['ombuseo'] = array(
         'description' => 'Stores SEO information for nodes',
         'fields' => array(
-            'nid' => array(
-                'description' => 'Node NID',
+            'entity_type' => array(
+                'description' => 'Entity Type',
+                'type' => 'varchar',
+                'length' => 255,
+                'unsigned' => TRUE,
+                'not null' => TRUE,
+            ),
+            'entity_id' => array(
+                'description' => 'Entity Id',
                 'type' => 'int',
                 'unsigned' => TRUE,
                 'not null' => TRUE,
@@ -41,7 +48,7 @@ function ombuseo_schema() {
                 'not null' => TRUE,
             ),
         ),
-        'primary key' => array('nid'),
+        'primary key' => array('entity_type', 'entity_id'),
     );
 
     return $schema;
@@ -54,4 +61,27 @@ function ombuseo_uninstall() {
   foreach (node_type_get_types() as $node_type) {
       variable_del('ombuseo_node_' . $node_type);
   }
+}
+
+/**
+ * Updates database to use entity ids instead of node ids.
+ */
+function ombuseo_update_7001() {
+  $field = array(
+    'description' => 'Entity Type',
+    'type' => 'varchar',
+    'length' => 255,
+    'not null' => TRUE,
+    'default' => '',
+    'initial' => 'node',
+  );
+  db_add_field('ombuseo', 'entity_type', $field);
+  $field = array(
+    'description' => 'Entity Id',
+    'type' => 'int',
+    'unsigned' => TRUE,
+    'not null' => TRUE,
+  );
+  db_change_field('ombuseo', 'nid', 'entity_id', $field);
+  db_add_primary_key('ombuseo', array('entity_type', 'entity_id'));
 }

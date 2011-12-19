@@ -46,7 +46,7 @@ function ombuseo_permission() {
  */
 function ombuseo_form_node_form_alter(&$form, $form_state) {
   if (user_access('edit ombuseo fields') && variable_get('ombuseo_node_' . $form['type']['#value'], 0)) {
-    $ombuseo = ombuseo_load($form['nid']['#value']);
+    $ombuseo = ombuseo_load('node', $form['nid']['#value']);
 
     $form['ombuseo'] = array(
       '#type' => 'fieldset',
@@ -82,40 +82,73 @@ function ombuseo_form_node_form_alter(&$form, $form_state) {
 }
 
 /**
- * Implements hook_node_insert().
+ * Implements hook_form_BASE_FORM_ID_alter().
  */
-function ombuseo_node_insert($node) {
-  if (isset($node->ombuseo) && user_access('edit ombuseo fields')) {
-    $obj = new stdClass();
-    $obj->nid = $node->nid;
-    foreach (array('meta_title', 'meta_description', 'meta_keywords') as $field) {
-      $obj->{$field} = $node->ombuseo[$field];
-    }
-    ombuseo_save($obj);
+function ombuseo_form_taxonomy_form_term_alter(&$form, $form_state) {
+  if (user_access('edit ombuseo fields') && variable_get('ombuseo_taxonomy_' . $form['vocabulary_machine_name']['#value'], FALSE)) {
+    $ombuseo = ombuseo_load('taxonomy_term', $form['tid']['#value']);
+
+    $form['ombuseo'] = array(
+      '#type' => 'fieldset',
+      '#title' => 'SEO',
+      '#collapsed' => TRUE,
+      '#collapsible' => TRUE,
+      '#tree' => TRUE,
+      '#group' => 'additional_settings',
+      '#weight' => 50,
+      '#attributes' => array(
+        'class' => array('ombuseo-settings-form'),
+      ),
+      'meta_title' => array(
+        '#title' => 'Alternate Page Title',
+        '#description' => 'The alternate title is only used in the HTML &lt;title&gt; tag. If not set, the regular title will be used.',
+        '#type' => 'textfield',
+        '#default_value' => isset($ombuseo['meta_title']) ? $ombuseo['meta_title'] : '0',
+      ),
+      'meta_description' => array(
+        '#title' => 'Meta Description',
+        '#description' => 'Enter the meta description for this content.',
+        '#type' => 'textfield',
+        '#default_value' => isset($ombuseo['meta_description']) ? $ombuseo['meta_description'] : '0',
+      ),
+      'meta_keywords' => array(
+        '#title' => 'Meta Keywords',
+        '#description' => 'Comma-separated list of meta keywords such as: blue, smurf, sky.',
+        '#type' => 'textfield',
+        '#default_value' => isset($ombuseo['meta_keywords']) ? $ombuseo['meta_keywords'] : '0',
+      ),
+    );
+
   }
 }
 
 /**
- * Implements hook_node_update().
+ * Implements hook_entity_insert().
  */
-function ombuseo_node_update($node) {
-  if (isset($node->ombuseo) && user_access('edit ombuseo fields')) {
-    $obj = new stdClass();
-    $obj->nid = $node->nid;
-    foreach (array('meta_title', 'meta_description', 'meta_keywords') as $field) {
-      $obj->{$field} = $node->ombuseo[$field];
-    }
-    ombuseo_save($obj);
-  }
+function ombuseo_entity_insert($entity, $type) {
+  ombuseo_entity_save($entity, $type);
 }
 
 /**
- * Implements hook_preprocess_node().
+ * Implements hook_entity_update().
  */
-function ombuseo_preprocess_node(&$vars) {
-  if (node_is_page($vars['node']) && variable_get('ombuseo_node_' . $vars['node']->type, 0)) {
-    $ombuseo = ombuseo_load($vars['node']->nid);
+function ombuseo_entity_update($entity, $type) {
+  ombuseo_entity_save($entity, $type);
+}
 
+/**
+ * Implements hook_preprocess_page().
+ */
+function ombuseo_preprocess_page(&$variables) {
+  // Try the various types of entities
+  if (($node = menu_get_object()) && variable_get('ombuseo_node_' . $node->type, FALSE)) {
+    $ombuseo = ombuseo_load('node', $node->nid);
+  }
+  elseif (($term = menu_get_object('taxonomy_term', 2)) && variable_get('ombuseo_taxonomy_' . $term->vocabulary_machine_name, FALSE)) {
+    $ombuseo = ombuseo_load('taxonomy_term', $term->tid);
+  }
+
+  if (isset($ombuseo)) {
     if (!empty($ombuseo['meta_title'])) {
       ombuseo_meta_title($ombuseo['meta_title']);
     }
@@ -148,10 +181,10 @@ function ombuseo_preprocess_node(&$vars) {
 /**
  * Implements hook_preprocess_html().
  */
-function ombuseo_preprocess_html(&$vars) {
+function ombuseo_preprocess_html(&$variables) {
   $meta_title = ombuseo_meta_title();
   if ($meta_title) {
-    $vars['head_title'] =  $meta_title . ' | ' . variable_get('site_name', 'Drupal');
+    $variables['head_title'] =  $meta_title . ' | ' . variable_get('site_name', 'Drupal');
   }
 }
 
@@ -165,17 +198,33 @@ function ombuseo_preprocess_html(&$vars) {
  */
 function ombuseo_settings_form() {
 
-  $form = array(
-    'instructions' => array(
-      '#markup' => '<p>Select the node types to use OMBU SEO',
-    ),
+  $form['ombuseo_node'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Node settings'),
+    '#description' => t('<p>Select the node types to use OMBU SEO'),
+    '#collasible' => FALSE,
+    '#collapsed' => FALSE,
   );
-
   foreach (node_type_get_types() as $node_type) {
-    $form['ombuseo_node_' . $node_type->type] = array(
+    $form['ombuseo_node']['ombuseo_node_' . $node_type->type] = array(
       '#title' => $node_type->name,
       '#type' => 'checkbox',
       '#default_value' => variable_get('ombuseo_node_' . $node_type->type, 0),
+    );
+  }
+
+  $form['ombuseo_taxonomy'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Taxonomy settings'),
+    '#description' => t('<p>Select the taxonomy types to use OMBU SEO'),
+    '#collasible' => FALSE,
+    '#collapsed' => FALSE,
+  );
+  foreach (taxonomy_get_vocabularies() as $vocab) {
+    $form['ombuseo_taxonomy']['ombuseo_taxonomy_' . $vocab->machine_name] = array(
+      '#title' => $vocab->name,
+      '#type' => 'checkbox',
+      '#default_value' => variable_get('ombuseo_taxonomy_' . $vocab->machine_name, 0),
     );
   }
 
@@ -193,14 +242,37 @@ function ombuseo_settings_form() {
  */
 
 /**
+ * Saves ombuseo fields for an entity.
+ */
+function ombuseo_entity_save($entity, $type) {
+  if (isset($entity->ombuseo) && user_access('edit ombuseo fields')) {
+    $obj = new stdClass();
+    $ids = entity_extract_ids($type, $entity);
+    $obj->entity_id = $ids[0];
+    $obj->entity_type = $type;
+    foreach (array('meta_title', 'meta_description', 'meta_keywords') as $field) {
+      $obj->{$field} = $entity->ombuseo[$field];
+    }
+    ombuseo_save($obj);
+  }
+}
+
+/**
  * Loads an ombuseo node row from the database
  *
- * @param $nid Node id to load
+ * @param $entity_type
+ *   The entity type to load.
+ * @param $entity_id
+ *   The entity id to load.
+ *
  * @return array Associative array with values, if no record was found, returns
  *   an array with empty values
  */
-function ombuseo_load($nid) {
-  $row = db_query("SELECT * FROM {ombuseo} WHERE nid = :nid", array(':nid' => $nid))->fetchAssoc();
+function ombuseo_load($entity_type, $entity_id) {
+  $row = db_query("SELECT * FROM {ombuseo} WHERE entity_id = :entity_id AND entity_type = :entity_type", array(
+    ':entity_id' => $entity_id,
+    ':entity_type' => $entity_type,
+  ))->fetchAssoc();
   if (!$row) {
     $row = array(
       'meta_title' => '',
@@ -217,12 +289,15 @@ function ombuseo_load($nid) {
  * @param $ombuseo_obj Object to save
  */
 function ombuseo_save(&$ombuseo_obj) {
-  if (!isset($ombuseo_obj->nid)) {
-    watchdog('ombuseo', 'Attempted to save entries to ombuseo without valid NID', NULL, WATCHDOG_ERROR);
+  if (!isset($ombuseo_obj->entity_id) || !isset($ombuseo_obj->entity_type)) {
+    watchdog('ombuseo', 'Attempted to save entries to ombuseo without valid entity id or entity type', NULL, WATCHDOG_ERROR);
     return FALSE;
   }
 
-  $exists = db_query("SELECT nid FROM {ombuseo} WHERE nid = :nid", array(':nid' => $ombuseo_obj->nid))->fetchField();
+  $exists = db_query("SELECT entity_id FROM {ombuseo} WHERE entity_id = :entity_id AND entity_type = :entity_type", array(
+    ':entity_id' => $ombuseo_obj->entity_id,
+    ':entity_type' => $ombuseo_obj->entity_type,
+  ))->fetchField();
 
   // Update
   if ($exists) {
