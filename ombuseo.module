@@ -301,7 +301,7 @@ function ombuseo_save(&$ombuseo_obj) {
 
   // Update
   if ($exists) {
-    $result = drupal_write_record('ombuseo', $ombuseo_obj, 'nid');
+    $result = drupal_write_record('ombuseo', $ombuseo_obj, array('entity_type', 'entity_id'));
   }
   // Create
   else {

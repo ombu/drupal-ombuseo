@@ -18,8 +18,8 @@ function ombuseo_schema() {
                 'description' => 'Entity Type',
                 'type' => 'varchar',
                 'length' => 255,
-                'unsigned' => TRUE,
                 'not null' => TRUE,
+                'default' => '',
             ),
             'entity_id' => array(
                 'description' => 'Entity Id',
