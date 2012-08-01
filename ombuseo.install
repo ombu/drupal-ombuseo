@@ -11,56 +11,58 @@
  */
 function ombuseo_schema() {
 
-    $schema['ombuseo'] = array(
-        'description' => 'Stores SEO information for nodes',
-        'fields' => array(
-            'entity_type' => array(
-                'description' => 'Entity Type',
-                'type' => 'varchar',
-                'length' => 255,
-                'not null' => TRUE,
-                'default' => '',
-            ),
-            'entity_id' => array(
-                'description' => 'Entity Id',
-                'type' => 'int',
-                'unsigned' => TRUE,
-                'not null' => TRUE,
-            ),
-            'meta_title' => array(
-                'description' => 'Meta title',
-                'type' => 'varchar',
-                'length' => 255,
-                'not null' => TRUE,
-                'default' => '',
-            ),
-            'meta_keywords' => array(
-                'description' => 'Meta Keywords',
-                'type' => 'varchar',
-                'length' => 255,
-                'not null' => TRUE,
-                'default' => '',
-            ),
-            'meta_description' => array(
-                'description' => 'Email address of the contact',
-                'type' => 'text',
-                'size' => 'medium',
-                'not null' => TRUE,
-            ),
-        ),
-        'primary key' => array('entity_type', 'entity_id'),
-    );
+  $schema['ombuseo'] = array(
+    'description' => 'Stores SEO information for nodes',
+    'fields' => array(
+      'entity_type' => array(
+        'description' => 'Object type',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'entity_id' => array(
+        'description' => 'Object ID',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => ''
+      ),
+      'meta_title' => array(
+        'description' => 'Meta title',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'meta_keywords' => array(
+        'description' => 'Meta Keywords',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'meta_description' => array(
+        'description' => 'Meta description',
+        'type' => 'text',
+        'size' => 'medium',
+        'not null' => TRUE,
+      ),
+    ),
+    'primary key' => array('entity_type', 'entity_id'),
+  );
 
-    return $schema;
+  return $schema;
 }
 
 /**
  * Implements hook_uninstall().
  */
 function ombuseo_uninstall() {
-  foreach (node_type_get_types() as $node_type) {
-      variable_del('ombuseo_node_' . $node_type);
-  }
+  variable_del('ombuseo_node_types');
+  variable_del('ombuseo_taxonomy_vocabs');
+  variable_del('ombuseo_views');
+  variable_del('ombuseo_path');
 }
 
 /**
@@ -85,4 +87,60 @@ function ombuseo_update_7001() {
   db_change_field('ombuseo', 'nid', 'entity_id', $field);
   db_drop_primary_key('ombuseo');
   db_add_primary_key('ombuseo', array('entity_type', 'entity_id'));
+}
+
+/**
+ * Rename entity ID and type columns and config variables.
+ */
+function ombuseo_update_7002() {
+  db_drop_primary_key('ombuseo');
+
+  $field = array(
+    'description' => 'Object ID',
+    'type' => 'varchar',
+    'length' => 255,
+    'not null' => TRUE,
+    'default' => ''
+  );
+  db_change_field('ombuseo', 'entity_id', 'id', $field);
+
+  $field = array(
+    'description' => 'Object type',
+    'type' => 'varchar',
+    'length' => 255,
+    'not null' => TRUE,
+    'default' => '',
+  );
+  db_change_field('ombuseo', 'entity_type', 'type', $field);
+
+  db_add_primary_key('ombuseo', array('type', 'id'));
+
+  // Rename node type variables
+  $node_types = array();
+  foreach (node_type_get_types() as $type) {
+    if (variable_get('ombuseo_node_' . $type->type, 0)) {
+      $node_types[$type->type] = $type->type;
+    }
+    else {
+      $node_types[$type->type] = 0;
+    }
+    variable_delete('ombuseo_node_' . $type->type);
+  }
+
+  variable_set('ombuseo_node_types', $node_types);
+
+  // Rename taxonomy type vocabs
+  $taxonomies = array();
+  foreach (taxonomy_get_vocabularies() as $vocab) {
+    if (variable_get('ombuseo_taxonomy_' . $vocab->machine_name, 0)) {
+      $taxonomies[$vocab->machine_name] = $vocab->machine_name;
+    }
+    else {
+      $taxonomies[$vocab->machine_name] = 0;
+    }
+    variable_delete('ombuseo_taxonomy_' . $vocab->machine_name);
+  }
+
+  variable_set('ombuseo_taxonomy_vocabs', $taxonomies);
+
 }
