@@ -139,6 +139,13 @@ function ombuseo_metadata_form($form, $form_state, $type, $id, $system_form = FA
     }
     $id = $path;
   }
+  // Add page arguments if this is a view.
+  if ($type == 'view') {
+    list($view, $display_id) = explode('::', $id);
+    $view = views_get_view($view);
+    $arguments = ombuseo_get_view_arguments($view, $display_id);
+    $id = $id . '::' . implode('::', $arguments);
+  }
 
   $ombuseo = ombuseo_load($type, $id);
 
@@ -230,7 +237,9 @@ function ombuseo_get_current_seo() {
     }
     elseif (($item = menu_get_item()) && $item['page_callback'] == 'views_page' &&
       in_array($item['page_arguments'][0] . '::' . $item['page_arguments'][1], variable_get('ombuseo_views', array()), TRUE)) {
-      $ombuseo = ombuseo_load('view', $item['page_arguments'][0] . '::' . $item['page_arguments'][1]);
+      $view = views_get_view($item['page_arguments'][0], $item['page_arguments'][1]);
+      $arguments = ombuseo_get_view_arguments($view, $item['page_arguments'][1]);
+      $ombuseo = ombuseo_load('view', $item['page_arguments'][0] . '::' . $item['page_arguments'][1] . '::' . join('::', $arguments));
     }
   }
 
@@ -390,4 +399,29 @@ function ombuseo_save(stdClass $ombuseo) {
     watchdog('ombuseo', 'Unable to save ombuseo record, with error: @error', array('@error' => $e->getMessage()), WATCHDOG_ERROR);
     return FALSE;
   }
+}
+
+/**
+ * Returns the path arguments for a view.
+ *
+ * @param $view
+ *   The view object
+ * @param $display
+ *   The current display
+ *
+ * @return
+ *   Array of arguments
+ */
+function ombuseo_get_view_arguments($view, $display) {
+  $arguments = array();
+
+  $path = $view->display[$display]->display_options['path'];
+  $path = explode('/', $path);
+  foreach ($path as $key => $value) {
+    if ($value == '%') {
+      $arguments[] = arg($key);
+    }
+  }
+
+  return $arguments;
 }
