@@ -2,3 +2,6 @@ name = "OMBU SEO"
 description = "Provides node fields for Meta Title, Keywords and Description."
 package = 'OMBU'
 core = 7.x
+
+dependencies[] = "xmlsitemap"
+dependencies[] = "xmlsitemap_menu"
