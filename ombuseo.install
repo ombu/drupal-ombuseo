@@ -139,7 +139,7 @@ function ombuseo_update_7002() {
     else {
       $node_types[$type->type] = 0;
     }
-    variable_delete('ombuseo_node_' . $type->type);
+    variable_del('ombuseo_node_' . $type->type);
   }
 
   variable_set('ombuseo_node_types', $node_types);
