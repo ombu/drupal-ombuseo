@@ -153,7 +153,7 @@ function ombuseo_update_7002() {
     else {
       $taxonomies[$vocab->machine_name] = 0;
     }
-    variable_delete('ombuseo_taxonomy_' . $vocab->machine_name);
+    variable_del('ombuseo_taxonomy_' . $vocab->machine_name);
   }
 
   variable_set('ombuseo_taxonomy_vocabs', $taxonomies);
