@@ -14,14 +14,14 @@ function ombuseo_schema() {
   $schema['ombuseo'] = array(
     'description' => 'Stores SEO information for nodes',
     'fields' => array(
-      'entity_type' => array(
+      'type' => array(
         'description' => 'Object type',
         'type' => 'varchar',
         'length' => 255,
         'not null' => TRUE,
         'default' => '',
       ),
-      'entity_id' => array(
+      'id' => array(
         'description' => 'Object ID',
         'type' => 'varchar',
         'length' => 255,
@@ -49,7 +49,7 @@ function ombuseo_schema() {
         'not null' => TRUE,
       ),
     ),
-    'primary key' => array('entity_type', 'entity_id'),
+    'primary key' => array('type', 'id'),
   );
 
   return $schema;
