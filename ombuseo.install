@@ -61,12 +61,16 @@ function ombuseo_schema() {
 function ombuseo_install() {
   // Setup XML sitemap.
   // Enable sitemap on main menu.
-  xmlsitemap_link_bundle_settings_save('menu_link', 'main-menu', array('status' => 1, 'priority' => 0.5));
+  if (module_exists('xmlsitemap_menu')) {
+    xmlsitemap_link_bundle_settings_save('menu_link', 'main-menu', array('status' => 1, 'priority' => 0.5));
+  }
 
   // Enable sitemap on all node types.
-  $types = node_type_get_types();
-  foreach ($types as $type => $settings) {
-    xmlsitemap_link_bundle_settings_save('node', $type, array('status' => 1, 'priority' => 0.5));
+  if (module_exists('xmlsitemap_node')) {
+    $types = node_type_get_types();
+    foreach ($types as $type => $settings) {
+      xmlsitemap_link_bundle_settings_save('node', $type, array('status' => 1, 'priority' => 0.5));
+    }
   }
 }
 
