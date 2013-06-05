@@ -102,7 +102,7 @@ function ombuseo_permission() {
  */
 function ombuseo_form_node_form_alter(&$form, $form_state) {
   if (user_access('edit ombuseo fields') && in_array($form['type']['#value'], variable_get('ombuseo_node_types', array()), TRUE)) {
-    $form['#submit'][] = 'ombuseo_metadata_form_submit';
+    $form['actions']['submit']['#submit'][] = 'ombuseo_metadata_form_submit';
     $form += ombuseo_metadata_form($form, $form_state, 'node', $form['nid']['#value']);
   }
 }
@@ -215,6 +215,18 @@ function ombuseo_metadata_form($form, $form_state, $type, $id, $system_form = FA
  * Submit handler for ombuseo_metadata_form().
  */
 function ombuseo_metadata_form_submit($form, &$form_state) {
+  // Attempt to set target id if not set.
+  if (!$form_state['values']['ombuseo']['id']) {
+    switch ($form_state['values']['ombuseo']['type']) {
+      case 'node':
+        $form_state['values']['ombuseo']['id'] = $form_state['nid'];
+        break;
+
+      case 'taxonomy_term':
+        $form_state['values']['ombuseo']['id'] = $form_state['tid'];
+        break;
+    }
+  }
   ombuseo_save((object) $form_state['values']['ombuseo']);
 }
 
