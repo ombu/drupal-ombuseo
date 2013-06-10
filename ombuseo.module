@@ -259,6 +259,15 @@ function ombuseo_get_current_seo() {
 }
 
 /**
+ * Implements hook_node_delete().
+ */
+function ombuseo_node_delete($node) {
+  if (ombuseo_load('node', $node->nid)) {
+    ombuseo_delete('node', $node->nid);
+  }
+}
+
+/**
  * Implements hook_preprocess_page().
  */
 function ombuseo_preprocess_page(&$variables) {
@@ -392,7 +401,7 @@ function ombuseo_load($type, $id) {
 }
 
 /**
- * Saves an ombuseo row to the database
+ * Saves an ombuseo row to the database.
  *
  * @param $ombuseo Object to save
  */
@@ -411,6 +420,21 @@ function ombuseo_save(stdClass $ombuseo) {
     watchdog('ombuseo', 'Unable to save ombuseo record, with error: @error', array('@error' => $e->getMessage()), WATCHDOG_ERROR);
     return FALSE;
   }
+}
+
+/**
+ * Deletes an ombuseo row from the database.
+ *
+ * @param $type
+ *   The type to delete.
+ * @param $id
+ *   The id to delete.
+ */
+function ombuseo_delete($type, $id) {
+  db_delete('ombuseo')
+    ->condition('type', 'node')
+    ->condition('id', $node->nid)
+    ->execute();
 }
 
 /**
