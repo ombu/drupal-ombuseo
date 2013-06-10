@@ -37,10 +37,9 @@ function ombuseo_schema() {
       ),
       'meta_keywords' => array(
         'description' => 'Meta Keywords',
-        'type' => 'varchar',
-        'length' => 255,
+        'type' => 'text',
+        'size' => 'medium',
         'not null' => TRUE,
-        'default' => '',
       ),
       'meta_description' => array(
         'description' => 'Meta description',
