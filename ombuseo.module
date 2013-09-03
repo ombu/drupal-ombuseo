@@ -188,13 +188,13 @@ function ombuseo_metadata_form($form, $form_state, $type, $id, $system_form = FA
   $form['ombuseo']['meta_description'] = array(
     '#title' => 'Meta Description',
     '#description' => 'Enter the meta description for this content.',
-    '#type' => 'textfield',
+    '#type' => 'textarea',
     '#default_value' => $ombuseo->meta_description,
   );
   $form['ombuseo']['meta_keywords'] = array(
     '#title' => 'Meta Keywords',
     '#description' => 'Comma-separated list of meta keywords such as: blue, smurf, sky.',
-    '#type' => 'textfield',
+    '#type' => 'textarea',
     '#default_value' => $ombuseo->meta_keywords,
   );
 
