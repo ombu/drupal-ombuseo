@@ -432,8 +432,8 @@ function ombuseo_save(stdClass $ombuseo) {
  */
 function ombuseo_delete($type, $id) {
   db_delete('ombuseo')
-    ->condition('type', 'node')
-    ->condition('id', $node->nid)
+    ->condition('type', $type)
+    ->condition('id', $id)
     ->execute();
 }
 
