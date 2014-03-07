@@ -317,7 +317,7 @@ function ombuseo_preprocess_html(&$variables) {
 function ombuseo_ombucore_settings_alter($type, &$settings) {
   switch ($type) {
     case 'content_types':
-      $settings['defaults']['xmlsitemap_settings_node_[type]'] = array(
+      $settings['node_settings']['defaults']['xmlsitemap_settings_node_[type]'] = array(
         'status' => '1',
         'priority' => '0.5',
       );
