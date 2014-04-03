@@ -310,6 +310,22 @@ function ombuseo_preprocess_html(&$variables) {
 }
 
 /**
+ * Implements hook_ombucore_settings_alter().
+ *
+ * Enable xmlsitemap for all content types.
+ */
+function ombuseo_ombucore_settings_alter($type, &$settings) {
+  switch ($type) {
+    case 'content_types':
+      $settings['node_settings']['defaults']['xmlsitemap_settings_node_[type]'] = array(
+        'status' => '1',
+        'priority' => '0.5',
+      );
+      break;
+  }
+}
+
+/**
  * Settings form
  */
 function ombuseo_settings_form() {
