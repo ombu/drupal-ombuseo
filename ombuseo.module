@@ -11,6 +11,55 @@
  */
 
 /**
+ * Implements hook_init().
+ *
+ * Redirect to frontpage if viewing the full node URL.
+ * Borrowed from globalredirect.module
+ */
+function ombuseo_init() {
+  // Get the query string parameters. If none set, set to NULL
+  $query_string = drupal_get_query_parameters();
+  if (empty($query_string)) {
+    $query_string = NULL;
+  }
+
+  // Establish the language prefix that should be used, ie. the one that
+  // drupal_goto() would use
+  $options = array(
+    'fragment' => '',
+    'query' => $query_string,
+    'absolute' => FALSE,
+    'alias' => FALSE,
+    'prefix' => '',
+    'external' => FALSE,
+  );
+
+  $request_path = request_path();
+
+
+  // Allow Drupal to rewrite the URL
+  // Most commonly this will be used to invoke locale_language_url_rewrite_url().
+  // Via the locale_url_outbound_alter() implementation of hook_url_outbound_alter().
+  // NOTE: We use $request_path here as current_path() is $_GET['q'] which gets
+  //       altered by core, whereas $request_path is untouched
+  drupal_alter('url_outbound', $request_path, $options, $request_path);
+
+  // Extract the prefix from the options.
+  $prefix = rtrim($options['prefix'], '/');
+  if (drupal_is_front_page()) {
+    // Redirect if the current request does not refer to the front page in the
+    // configured fashion (with or without a prefix)
+    if (request_path() != $prefix) {
+      $query_string = drupal_get_query_parameters();
+      drupal_goto('', $options, 301);
+    }
+    // If we've got to this point then we're on a front page with a VALID
+    // request path (such as a language-prefix front page such as '/de')
+    return;
+  }
+}
+
+/**
  * Implements hook_menu().
  */
 function ombuseo_menu() {
@@ -310,11 +359,11 @@ function ombuseo_preprocess_html(&$variables) {
 }
 
 /**
- * Implements hook_ombucore_settings_alter().
+ * Implements hook_profile_tasks_settings_alter().
  *
  * Enable xmlsitemap for all content types.
  */
-function ombuseo_ombucore_settings_alter($type, &$settings) {
+function ombuseo_profile_tasks_settings_alter($type, &$settings) {
   switch ($type) {
     case 'content_types':
       $settings['node_settings']['defaults']['xmlsitemap_settings_node_[type]'] = array(
@@ -476,4 +525,15 @@ function ombuseo_get_view_arguments($view, $display) {
   }
 
   return $arguments;
+}
+
+/**
+ * Implements hook_xmlsitemap_link_alter().
+ *
+ * Don't index homepage node, since it is already being indexed as "frontpage".
+ */
+function ombuseo_xmlsitemap_link_alter(&$link) {
+  if ($link['loc'] == variable_get('site_frontpage', '')) {
+    $link['status'] = 0;
+  }
 }
