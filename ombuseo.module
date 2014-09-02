@@ -104,15 +104,16 @@ function ombuseo_menu_alter(&$callbacks) {
   }
 
   // Iterate over all callbacks and match path.
-  foreach ($callbacks as $path => $router) {
-    $pattern = variable_get('ombuseo_path', '');
+  $pattern = variable_get('ombuseo_path', '');
+  $additions = array();
+  array_walk($callbacks, function($value, $path) use ($pattern, &$additions) {
     if (drupal_match_path($path, $pattern)) {
-      $callbacks[$path . '/view'] = array(
+      $additions[$path . '/view'] = array(
         'title' => 'View',
         'type' => MENU_DEFAULT_LOCAL_TASK,
         'weight' => -5
       );
-      $callbacks[$path . '/ombuseo'] = array(
+      $additions[$path . '/ombuseo'] = array(
         'title' => 'SEO',
         'page callback' => 'drupal_get_form',
         'page arguments' => array('ombuseo_metadata_form', 'path', NULL, TRUE),
@@ -120,7 +121,8 @@ function ombuseo_menu_alter(&$callbacks) {
         'type' => MENU_LOCAL_TASK
       );
     }
-  }
+  });
+  $callbacks += $additions;
 }
 
 /**
