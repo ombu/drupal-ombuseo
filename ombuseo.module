@@ -246,6 +246,18 @@ function ombuseo_metadata_form($form, $form_state, $type, $id, $system_form = FA
     '#type' => 'textarea',
     '#default_value' => $ombuseo->meta_keywords,
   );
+  $form['ombuseo']['robots_nofollow'] = array(
+    '#title' => 'Robots nofollow',
+    '#description' => 'Check to tell search engine robots to not follow any links in this content.',
+    '#type' => 'checkbox',
+    '#default_value' => $ombuseo->robots_nofollow,
+  );
+  $form['ombuseo']['robots_noindex'] = array(
+    '#title' => 'Robots noindex',
+    '#description' => 'Check to disallow search engines from showing this page in their results.',
+    '#type' => 'checkbox',
+    '#default_value' => $ombuseo->robots_noindex,
+  );
 
   if ($system_form) {
     $form['#submit'][] = 'ombuseo_metadata_form_submit';
@@ -345,6 +357,29 @@ function ombuseo_preprocess_page(&$variables) {
       );
       drupal_add_html_head($meta_keywords, 'meta_keywords');
     }
+    if (!empty($ombuseo->robots_nofollow)) {
+      $robots_nofollow = array(
+        '#type' => 'html_tag',
+        '#tag' => 'meta',
+        '#attributes' => array(
+          'name' => 'robots',
+          'content' => 'nofollow',
+        ),
+      );
+      drupal_add_html_head($robots_nofollow, 'robots_nofollow');
+    }
+    if (!empty($ombuseo->robots_noindex)) {
+      $robots_noindex = array(
+        '#type' => 'html_tag',
+        '#tag' => 'meta',
+        '#attributes' => array(
+          'name' => 'robots',
+          'content' => 'noindex',
+        ),
+      );
+      drupal_add_html_head($robots_noindex, 'robots_noindex');
+    }
+
   }
 }
 
@@ -460,6 +495,8 @@ function ombuseo_load($type, $id) {
       'meta_title' => '',
       'meta_description' => '',
       'meta_keywords' => '',
+      'robots_nofollow' => '',
+      'robots_noindex' => '',
     );
   }
   return $row;
@@ -478,6 +515,8 @@ function ombuseo_save(stdClass $ombuseo) {
       'meta_title' => $ombuseo->meta_title,
       'meta_description' => $ombuseo->meta_description,
       'meta_keywords' => $ombuseo->meta_keywords,
+      'robots_nofollow' => $ombuseo->robots_nofollow,
+      'robots_noindex' => $ombuseo->robots_noindex,
     ))
       ->execute();
   }
