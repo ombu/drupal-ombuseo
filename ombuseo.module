@@ -17,6 +17,10 @@
  * Borrowed from globalredirect.module
  */
 function ombuseo_init() {
+  if (!_ombuseo_is_actual_request()) {
+    return FALSE;
+  }
+
   // Get the query string parameters. If none set, set to NULL
   $query_string = drupal_get_query_parameters();
   if (empty($query_string)) {
@@ -577,4 +581,61 @@ function ombuseo_xmlsitemap_link_alter(&$link) {
   if ($link['loc'] == variable_get('site_frontpage', '')) {
     $link['status'] = 0;
   }
+}
+
+/**
+ * Internavl function to determine if the init is running on an actual page
+ * request where it should be run. Prevents errors from cli, cron, etc.
+ *
+ * Based off code from `_globalredirect_is_active()`.
+ */
+function _ombuseo_is_actual_request() {
+  /**
+   * We need to do a test to make sure we only clean up URL's for the main
+   * request. This stops modules such as the Ad Module which had its own script
+   * in its folder doing a bootstrap which invoked hook_init() and caused some
+   * banners to get "cleaned up"
+   *
+   * @see http://drupal.org/node/205810
+   * @see http://drupal.org/node/278615
+   */
+  if ($_SERVER['SCRIPT_NAME'] != $GLOBALS['base_path'] . 'index.php') {
+    return FALSE;
+  }
+
+  /**
+   * If this is a command line request (Drush, etc), skip processing.
+   */
+  if (drupal_is_cli()) {
+    return FALSE;
+  }
+
+  /**
+   * If the site is in offline mode there is little point doing any of this as
+   * you might end up redirecting to a 503.
+   */
+  if (variable_get('site_offline', 0) == 1) {
+    return FALSE;
+  }
+
+  /**
+   * If there is something posted, GlobalRedirect is not active
+   */
+  if (!empty($_POST)) {
+    return FALSE;
+  }
+
+  /**
+   * If we're going to ignore the admin path, return false.
+   * This is added to allow people to continue to get to the 'admin*' paths,
+   * even if the module is misbehaving.
+   */
+  if (arg(0) == 'admin' || arg(0) == 'batch') {
+    return FALSE;
+  }
+
+  /**
+   * We seem to have passed all the tests - let say we're active
+   */
+  return TRUE;
 }
