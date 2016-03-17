@@ -47,6 +47,18 @@ function ombuseo_schema() {
         'size' => 'medium',
         'not null' => TRUE,
       ),
+      'robots_nofollow' => array(
+        'description' => 'Boolean indicating whether nofollow meta tag should be applied.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'robots_noindex' => array(
+        'description' => 'Boolean indicating whether noindex meta tag should be applied.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
     ),
     'primary key' => array('type', 'id'),
   );
@@ -160,5 +172,24 @@ function ombuseo_update_7002() {
   }
 
   variable_set('ombuseo_taxonomy_vocabs', $taxonomies);
+
+}
+
+/**
+ * Adds new fields for storing robots nolink and nofollow values
+ */
+function ombuseo_update_7003() {
+  $spec = array(
+    'description' => 'Boolean indicating whether nofollow meta tag should be applied.',
+    'type' => 'int',
+    'not null' => TRUE,
+    'default' => 0,
+  );
+
+  db_add_field('ombuseo', 'robots_nofollow', $spec, $keys_new = array());
+
+  $spec['description'] = 'Boolean indicating whether noindex meta tag should be applied.';
+
+  db_add_field('ombuseo', 'robots_noindex', $spec, $keys_new = array());
 
 }
