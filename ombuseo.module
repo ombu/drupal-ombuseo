@@ -130,6 +130,17 @@ function ombuseo_menu_alter(&$callbacks) {
 }
 
 /**
+ * Implements hook_module_implements_alter().
+ */
+function ombuseo_module_implements_alter(&$implementations, $hook) {
+  if ($hook == 'menu_alter') {
+    $group = $implementations['ombuseo'];
+    unset($implementations['ombuseo']);
+    $implementations['ombuseo'] = $group;
+  }
+}
+
+/**
  * Implements hook_admin_paths().
  */
 function ombuseo_admin_paths() {
