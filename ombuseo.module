@@ -71,7 +71,22 @@ function ombuseo_menu() {
     'access arguments' => array('configure ombuseo'),
     'page callback' => 'drupal_get_form',
     'page arguments' => array('ombuseo_settings_form'),
+    'weight' => 4,
   );
+
+
+
+  if (module_exists('ombutranslation')) {
+    $items['admin/dashboard/locale/open-graph'] = array(
+      'type' => MENU_LOCAL_TASK,
+      'title' => 'Open Graph Locale Settings',
+      'description' => 'Set Open Graph locales',
+      'access arguments' => array('configure ombuseo'),
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('ombuseo_open_graph_locale_settings_form'),
+      'weight' => 6,
+    );
+  }
 
   return $items;
 }
@@ -259,6 +274,51 @@ function ombuseo_metadata_form($form, $form_state, $type, $id, $system_form = FA
     '#default_value' => $ombuseo->robots_noindex,
   );
 
+
+  if (isset($form_state['node']) && in_array($form_state['node']->type, variable_get('ombuseo_open_graph_node_types', array()), TRUE)) {
+    $form['ombuseo']['og_type'] = array(
+      '#title' => 'Open Graph Type',
+      '#type' => 'select',
+      '#options' => array(
+        'article' => 'Article',
+        'place' => 'Place',
+        'video' => 'Video',
+        'book' => 'Book',
+        'profile' => 'Profile',
+        'website' => 'Website'
+      ),
+      '#default_value' => $ombuseo->og_type
+    );
+
+    $form['ombuseo']['og_title'] = array(
+      '#title' => 'Open Graph Title',
+      '#description' => 'Enter the Open Graph title for this content.',
+      '#type' => 'textfield',
+      '#default_value' => $ombuseo->og_title,
+    );
+    $form['ombuseo']['og_description'] = array(
+      '#title' => 'Open Graph Description',
+      '#description' => 'Enter the Open Graph description for this content.',
+      '#type' => 'textarea',
+      '#default_value' => $ombuseo->og_description,
+    );
+    $form['ombuseo']['og_image'] = array(
+      '#title' => 'Open Graph Image',
+      '#description' => 'Set the Open Graph Image',
+      '#type' => 'ombumedia',
+      '#media_options' => array(
+        'global' => array(
+          'types' => array('image' => 'image'),
+          'view_modes' => array('image' => array('default')),
+          'schemes' => array('public' => 'public'),
+          'file_extensions' => 'png gif jpg jpeg',
+          'uri_scheme' => 'public',
+        ),
+      ),
+      '#default_value' => array('fid' => $ombuseo->og_image),
+    );
+  }
+
   if ($system_form) {
     $form['#submit'][] = 'ombuseo_metadata_form_submit';
     $form['ombuseo']['submit'] = array(
@@ -288,6 +348,12 @@ function ombuseo_metadata_form_submit($form, &$form_state) {
         break;
     }
   }
+
+  if (isset($form_state['values']['ombuseo']['og_image'])) {
+    $form_state['values']['ombuseo']['og_image'] = $form_state['values']['ombuseo']['og_image']['fid'];
+  }
+
+
   ombuseo_save((object) $form_state['values']['ombuseo']);
 }
 
@@ -302,7 +368,7 @@ function ombuseo_get_current_seo() {
     if (drupal_match_path(current_path(), variable_get('ombuseo_path', ''))) {
       $ombuseo = ombuseo_load('path', current_path());
     }
-    elseif (($node = menu_get_object()) && in_array($node->type, variable_get('ombuseo_node_types', array()), TRUE)) {
+    elseif (($node = menu_get_object()) && (in_array($node->type, variable_get('ombuseo_node_types', array()) , TRUE)  || in_array($node->type, variable_get('ombuseo_open_graph_node_types', array()) , TRUE) ) ) {
       $ombuseo = ombuseo_load('node', $node->nid);
     }
     elseif (($term = menu_get_object('taxonomy_term', 2)) && in_array($term->vocabulary_machine_name, variable_get('ombuseo_taxonomy_vocabs', array()), TRUE)) {
@@ -357,6 +423,7 @@ function ombuseo_preprocess_page(&$variables) {
       );
       drupal_add_html_head($meta_keywords, 'meta_keywords');
     }
+
     if (!empty($ombuseo->robots_nofollow)) {
       $robots_nofollow = array(
         '#type' => 'html_tag',
@@ -380,7 +447,124 @@ function ombuseo_preprocess_page(&$variables) {
       drupal_add_html_head($robots_noindex, 'robots_noindex');
     }
 
+
+
+    global $base_url, $language;
+
+    if ($ombuseo->type == 'node' && ($node = node_load($ombuseo->id)) && in_array($node->type, variable_get('ombuseo_open_graph_node_types', array()), TRUE)) {
+      global $base_url;
+
+      $n = $node;
+      $og_url = array(
+        '#type' => 'html_tag',
+        '#tag' => 'meta',
+        '#attributes' => array(
+          'property' => 'og:url',
+          'content' => $base_url . request_uri()
+        ),
+      );
+      drupal_add_html_head($og_url, 'open_graph_type_meta');
+
+
+      if (module_exists('ombutranslation')) {
+        global $language;
+
+        foreach (ombutranslation_get_locales() as $locale) {
+          if ($locale->status) {
+            if ($language->prefix == $locale->locale) {
+              if ($og_locale_code = variable_get('ombuseo_open_graph_locale_' . $locale->locale)) {
+                $og_locale = array(
+                  '#type' => 'html_tag',
+                  '#tag' => 'meta',
+                  '#attributes' => array(
+                    'property' => 'og:locale',
+                    'content' => $og_locale_code
+                  ),
+                );
+                drupal_add_html_head($og_locale, 'open_graph_active_locale_meta');
+              }
+            }
+            else {
+              if ($og_locale_code = variable_get('ombuseo_open_graph_locale_' . $locale->locale)) {
+                $og_locale = array(
+                  '#type' => 'html_tag',
+                  '#tag' => 'meta',
+                  '#attributes' => array(
+                    'property' => 'og:locale:alternate',
+                    'content' => $og_locale_code
+                  ),
+                );
+                drupal_add_html_head($og_locale, 'open_graph_alternate_locale_meta_' . $og_locale_code);
+              }
+            }
+          }
+
+
+        }
+      }
+
+
+      
+      if (!empty($ombuseo->og_type)) {
+        $og_type = array(
+          '#type' => 'html_tag',
+          '#tag' => 'meta',
+          '#attributes' => array(
+            'property' => 'og:type',
+            'content' => $ombuseo->og_type,
+          ),
+        );
+        drupal_add_html_head($og_type, 'open_graph_type_meta');
+      }
+
+      if (!empty($ombuseo->og_title)) {
+        $og_title = array(
+          '#type' => 'html_tag',
+          '#tag' => 'meta',
+          '#attributes' => array(
+            'property' => 'og:title',
+            'content' => $ombuseo->og_title,
+          ),
+        );
+        drupal_add_html_head($og_title, 'open_graph_title_meta');
+      }
+
+      if (!empty($ombuseo->og_description)) {
+        $og_description = array(
+          '#type' => 'html_tag',
+          '#tag' => 'meta',
+          '#attributes' => array(
+            'property' => 'og:description',
+            'content' => $ombuseo->og_description,
+          ),
+        );
+        drupal_add_html_head($og_description, 'open_graph_description_meta');
+      }
+
+
+      if (!empty($ombuseo->og_image)) {
+        
+        $file = file_load($ombuseo->og_image);
+        
+        $og_image = array(
+          '#type' => 'html_tag',
+          '#tag' => 'meta',
+          '#attributes' => array(
+            'property' => 'og:image',
+            'content' => file_create_url($file->uri),
+          ),
+        );
+        drupal_add_html_head($og_image, 'open_graph_image_meta');
+      }
+      
+    }
   }
+
+
+}
+
+function ombuseo_get_open_graph_locales() {
+  ombutranslation_get_locales();
 }
 
 /**
@@ -425,6 +609,15 @@ function ombuseo_settings_form() {
     '#description' => t('Select the node types to use OMBU SEO.')
   );
 
+  $form['ombuseo_open_graph_node_types'] = array(
+    '#title' => t('Open Graph settings'),
+    '#type' => 'checkboxes',
+    '#options' => $node_types,
+    '#default_value' => variable_get('ombuseo_open_graph_node_types', array()),
+    '#description' => t('Select the node types to use Open Graph with.')
+  );
+
+
   $vocabs = array();
   foreach (taxonomy_get_vocabularies() as $vocab) {
     $vocabs[$vocab->machine_name] =$vocab->name;
@@ -466,6 +659,181 @@ function ombuseo_settings_form() {
   return system_settings_form($form);
 }
 
+
+function ombuseo_open_graph_locale_settings_form() {
+
+  $form[] = array();
+
+  $locales = ombutranslation_get_locales();
+
+  $open_graph_locales = ombuseo_open_graph_locales();
+
+  foreach ($locales as $locale) {
+    $form['ombuseo_open_graph_locale_' . $locale->locale] = array(
+      '#title' => $locale->label,
+      '#type' => 'select',
+      '#options' => $open_graph_locales,
+      '#default_value' => variable_get('ombuseo_open_graph_locale_' . $locale->locale)
+
+    );
+
+  }
+
+  return system_settings_form($form);
+}
+
+function ombuseo_open_graph_locales() {
+
+  return array (
+      'af_ZA' => 'Afrikaans',
+      'ak_GH' => 'Akan',
+      'am_ET' => 'Amharic',
+      'ar_AR' => 'Arabic',
+      'as_IN' => 'Assamese',
+      'ay_BO' => 'Aymara',
+      'az_AZ' => 'Azerbaijani',
+      'be_BY' => 'Belarusian',
+      'bg_BG' => 'Bulgarian',
+      'bn_IN' => 'Bengali',
+      'br_FR' => 'Breton',
+      'bs_BA' => 'Bosnian',
+      'ca_ES' => 'Catalan',
+      'cb_IQ' => 'Sorani Kurdish',
+      'ck_US' => 'Cherokee',
+      'co_FR' => 'Corsican',
+      'cs_CZ' => 'Czech',
+      'cx_PH' => 'Cebuano',
+      'cy_GB' => 'Welsh',
+      'da_DK' => 'Danish',
+      'de_DE' => 'German',
+      'el_GR' => 'Greek',
+      'en_GB' => 'English (UK)',
+      'en_IN' => 'English (India)',
+      'en_PI' => 'English (Pirate)',
+      'en_UD' => 'English (Upside Down)',
+      'en_US' => 'English (US)',
+      'eo_EO' => 'Esperanto',
+      'es_CL' => 'Spanish (Chile)',
+      'es_CO' => 'Spanish (Colombia)',
+      'es_ES' => 'Spanish (Spain)',
+      'es_LA' => 'Spanish',
+      'es_MX' => 'Spanish (Mexico)',
+      'es_VE' => 'Spanish (Venezuela)',
+      'et_EE' => 'Estonian',
+      'eu_ES' => 'Basque',
+      'fa_IR' => 'Persian',
+      'fb_LT' => 'Leet Speak',
+      'ff_NG' => 'Fulah',
+      'fi_FI' => 'Finnish',
+      'fo_FO' => 'Faroese',
+      'fr_CA' => 'French (Canada)',
+      'fr_FR' => 'French (France)',
+      'fy_NL' => 'Frisian',
+      'ga_IE' => 'Irish',
+      'gl_ES' => 'Galician',
+      'gn_PY' => 'Guarani',
+      'gu_IN' => 'Gujarati',
+      'gx_GR' => 'Classical Greek',
+      'ha_NG' => 'Hausa',
+      'he_IL' => 'Hebrew',
+      'hi_IN' => 'Hindi',
+      'hr_HR' => 'Croatian',
+      'ht_HT' => 'Haitian Creole',
+      'hu_HU' => 'Hungarian',
+      'hy_AM' => 'Armenian',
+      'id_ID' => 'Indonesian',
+      'ig_NG' => 'Igbo',
+      'is_IS' => 'Icelandic',
+      'it_IT' => 'Italian',
+      'ja_JP' => 'Japanese',
+      'ja_KS' => 'Japanese (Kansai)',
+      'jv_ID' => 'Javanese',
+      'ka_GE' => 'Georgian',
+      'kk_KZ' => 'Kazakh',
+      'km_KH' => 'Khmer',
+      'kn_IN' => 'Kannada',
+      'ko_KR' => 'Korean',
+      'ku_TR' => 'Kurdish (Kurmanji)',
+      'ky_KG' => 'Kyrgyz',
+      'la_VA' => 'Latin',
+      'lg_UG' => 'Ganda',
+      'li_NL' => 'Limburgish',
+      'ln_CD' => 'Lingala',
+      'lo_LA' => 'Lao',
+      'lt_LT' => 'Lithuanian',
+      'lv_LV' => 'Latvian',
+      'mg_MG' => 'Malagasy',
+      'mi_NZ' => 'Māori',
+      'mk_MK' => 'Macedonian',
+      'ml_IN' => 'Malayalam',
+      'mn_MN' => 'Mongolian',
+      'mr_IN' => 'Marathi',
+      'ms_MY' => 'Malay',
+      'mt_MT' => 'Maltese',
+      'my_MM' => 'Burmese',
+      'nb_NO' => 'Norwegian (bokmal)',
+      'nd_ZW' => 'Ndebele',
+      'ne_NP' => 'Nepali',
+      'nl_BE' => 'Dutch (België)',
+      'nl_NL' => 'Dutch',
+      'nn_NO' => 'Norwegian (nynorsk)',
+      'ny_MW' => 'Chewa',
+      'or_IN' => 'Oriya',
+      'pa_IN' => 'Punjabi',
+      'pl_PL' => 'Polish',
+      'ps_AF' => 'Pashto',
+      'pt_BR' => 'Portuguese (Brazil)',
+      'pt_PT' => 'Portuguese (Portugal)',
+      'qc_GT' => 'Quiché',
+      'qu_PE' => 'Quechua',
+      'rm_CH' => 'Romansh',
+      'ro_RO' => 'Romanian',
+      'ru_RU' => 'Russian',
+      'rw_RW' => 'Kinyarwanda',
+      'sa_IN' => 'Sanskrit',
+      'sc_IT' => 'Sardinian',
+      'se_NO' => 'Northern Sámi',
+      'si_LK' => 'Sinhala',
+      'sk_SK' => 'Slovak',
+      'sl_SI' => 'Slovenian',
+      'sn_ZW' => 'Shona',
+      'so_SO' => 'Somali',
+      'sq_AL' => 'Albanian',
+      'sr_RS' => 'Serbian',
+      'sv_SE' => 'Swedish',
+      'sw_KE' => 'Swahili',
+      'sy_SY' => 'Syriac',
+      'sz_PL' => 'Silesian',
+      'ta_IN' => 'Tamil',
+      'te_IN' => 'Telugu',
+      'tg_TJ' => 'Tajik',
+      'th_TH' => 'Thai',
+      'tk_TM' => 'Turkmen',
+      'tl_PH' => 'Filipino',
+      'tl_ST' => 'Klingon',
+      'tr_TR' => 'Turkish',
+      'tt_RU' => 'Tatar',
+      'tz_MA' => 'Tamazight',
+      'uk_UA' => 'Ukrainian',
+      'ur_PK' => 'Urdu',
+      'uz_UZ' => 'Uzbek',
+      'vi_VN' => 'Vietnamese',
+      'wo_SN' => 'Wolof',
+      'xh_ZA' => 'Xhosa',
+      'yi_DE' => 'Yiddish',
+      'yo_NG' => 'Yoruba',
+      'zh_CN' => 'Simplified Chinese (China)',
+      'zh_HK' => 'Traditional Chinese (Hong Kong)',
+      'zh_TW' => 'Traditional Chinese (Taiwan)',
+      'zu_ZA' => 'Zulu',
+      'zz_TR' => 'Zazaki',
+    );
+
+
+}
+
+
+
 /**
  * Submit handler for ombuseo_mdedata_form().
  */
@@ -497,6 +865,10 @@ function ombuseo_load($type, $id) {
       'meta_keywords' => '',
       'robots_nofollow' => '',
       'robots_noindex' => '',
+      'og_type' => '',
+      'og_title' => '',
+      'og_description' => '',
+      'og_image' => ''
     );
   }
   return $row;
@@ -517,6 +889,10 @@ function ombuseo_save(stdClass $ombuseo) {
       'meta_keywords' => $ombuseo->meta_keywords,
       'robots_nofollow' => $ombuseo->robots_nofollow,
       'robots_noindex' => $ombuseo->robots_noindex,
+      'og_type' => $ombuseo->og_type,
+      'og_title' => $ombuseo->og_title,
+      'og_description' => $ombuseo->og_description,
+      'og_image' => $ombuseo->og_image
     ))
       ->execute();
   }
