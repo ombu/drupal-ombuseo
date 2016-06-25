@@ -47,6 +47,32 @@ function ombuseo_schema() {
         'size' => 'medium',
         'not null' => TRUE,
       ),
+      'og_type' => array(
+        'description' => 'Open Graph type',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'og_title' => array(
+        'description' => 'Open Graph title',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'og_description' => array(
+        'description' => 'Open Graph description',
+        'type' => 'text',
+        'size' => 'medium',
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'og_image' => array(
+        'description' => 'Open Graph image',
+        'type' => 'int',
+        'unsigned' => TRUE
+      ),
     ),
     'primary key' => array('type', 'id'),
   );
@@ -161,4 +187,45 @@ function ombuseo_update_7002() {
 
   variable_set('ombuseo_taxonomy_vocabs', $taxonomies);
 
+}
+
+
+/**
+ * Add fields for Open Graph
+ */
+function ombuseo_update_7003() {
+
+  $fields = array(
+    'og_type' => array(
+      'description' => 'Open Graph type',
+      'type' => 'varchar',
+      'length' => 255,
+      'not null' => TRUE,
+      'default' => '',
+    ),
+    'og_title' => array(
+      'description' => 'Open Graph title',
+      'type' => 'varchar',
+      'length' => 255,
+      'not null' => TRUE,
+      'default' => '',
+    ),
+    'og_description' => array(
+      'description' => 'Open Graph description',
+      'type' => 'text',
+      'size' => 'medium',
+    ),
+    'og_image' => array(
+      'description' => 'Open Graph image',
+      'type' => 'int',
+      'unsigned' => TRUE
+    ),
+  );
+
+  foreach ($fields as $name => $field) {
+
+    db_add_field('ombuseo', $name, $field);
+  }
+  
+  
 }
