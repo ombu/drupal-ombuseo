@@ -319,6 +319,51 @@ function ombuseo_metadata_form($form, $form_state, $type, $id, $system_form = FA
     );
   }
 
+
+  if (isset($form_state['node']) && in_array($form_state['node']->type, variable_get('ombuseo_open_graph_node_types', array()), TRUE)) {
+    $form['ombuseo']['og_type'] = array(
+      '#title' => 'Open Graph Type',
+      '#type' => 'select',
+      '#options' => array(
+        'article' => 'Article',
+        'place' => 'Place',
+        'video' => 'Video',
+        'book' => 'Book',
+        'profile' => 'Profile',
+        'website' => 'Website'
+      ),
+      '#default_value' => $ombuseo->og_type
+    );
+
+    $form['ombuseo']['og_title'] = array(
+      '#title' => 'Open Graph Title',
+      '#description' => 'Enter the Open Graph title for this content.',
+      '#type' => 'textfield',
+      '#default_value' => $ombuseo->og_title,
+    );
+    $form['ombuseo']['og_description'] = array(
+      '#title' => 'Open Graph Description',
+      '#description' => 'Enter the Open Graph description for this content.',
+      '#type' => 'textarea',
+      '#default_value' => $ombuseo->og_description,
+    );
+    $form['ombuseo']['og_image'] = array(
+      '#title' => 'Open Graph Image',
+      '#description' => 'Set the Open Graph Image',
+      '#type' => 'ombumedia',
+      '#media_options' => array(
+        'global' => array(
+          'types' => array('image' => 'image'),
+          'view_modes' => array('image' => array('default')),
+          'schemes' => array('public' => 'public'),
+          'file_extensions' => 'png gif jpg jpeg',
+          'uri_scheme' => 'public',
+        ),
+      ),
+      '#default_value' => array('fid' => $ombuseo->og_image),
+    );
+  }
+
   if ($system_form) {
     $form['#submit'][] = 'ombuseo_metadata_form_submit';
     $form['ombuseo']['submit'] = array(
@@ -434,6 +479,7 @@ function ombuseo_preprocess_page(&$variables) {
       drupal_add_html_head($meta_keywords, 'meta_keywords');
     }
 
+
     if (!empty($ombuseo->robots_nofollow)) {
       $robots_nofollow = array(
         '#type' => 'html_tag',
@@ -456,7 +502,6 @@ function ombuseo_preprocess_page(&$variables) {
       );
       drupal_add_html_head($robots_noindex, 'robots_noindex');
     }
-
 
 
     global $base_url, $language;
@@ -755,7 +800,7 @@ function ombuseo_load($type, $id) {
       'og_type' => '',
       'og_title' => '',
       'og_description' => '',
-      'og_image' => 0
+      'og_image' => ''
     );
   }
   return $row;
@@ -774,6 +819,7 @@ function ombuseo_save(stdClass $ombuseo) {
       'meta_title' => $ombuseo->meta_title,
       'meta_description' => $ombuseo->meta_description,
       'meta_keywords' => $ombuseo->meta_keywords,
+
       'robots_nofollow' => $ombuseo->robots_nofollow,
       'robots_noindex' => $ombuseo->robots_noindex,
       'og_type' => $ombuseo->og_type,

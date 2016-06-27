@@ -201,6 +201,7 @@ function ombuseo_update_7002() {
 
 }
 
+
 /**
  * Adds new fields for storing robots nolink and nofollow values
  */
