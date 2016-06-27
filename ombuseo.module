@@ -292,6 +292,16 @@ function ombuseo_metadata_form_submit($form, &$form_state) {
     $form_state['values']['ombuseo']['og_image'] = $form_state['values']['ombuseo']['og_image']['fid'];
   }
 
+  $form_state['values']['ombuseo'] += array(
+    'meta_title' => '',
+    'meta_description' => '',
+    'meta_keywords' => '',
+    'og_type' => '',
+    'og_title' => '',
+    'og_description' => '',
+    'og_image' => 0
+  );
+
 
   ombuseo_save((object) $form_state['values']['ombuseo']);
 }
@@ -641,7 +651,7 @@ function ombuseo_load($type, $id) {
       'og_type' => '',
       'og_title' => '',
       'og_description' => '',
-      'og_image' => ''
+      'og_image' => 0
     );
   }
   return $row;
