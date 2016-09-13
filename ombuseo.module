@@ -503,13 +503,9 @@ function ombuseo_preprocess_page(&$variables) {
       drupal_add_html_head($robots_noindex, 'robots_noindex');
     }
 
-
-    global $base_url, $language;
-
-    if ($ombuseo->type == 'node' && ($node = node_load($ombuseo->id)) && in_array($node->type, variable_get('ombuseo_open_graph_node_types', array()), TRUE)) {
+    if (isset($node->type) && $ombuseo->type == 'node' && ($node = node_load($ombuseo->id)) && in_array($node->type, variable_get('ombuseo_open_graph_node_types', array()), TRUE)) {
       global $base_url;
 
-      $n = $node;
       $og_url = array(
         '#type' => 'html_tag',
         '#tag' => 'meta',
@@ -553,8 +549,6 @@ function ombuseo_preprocess_page(&$variables) {
               }
             }
           }
-
-
         }
       }
 
