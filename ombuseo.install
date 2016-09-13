@@ -47,6 +47,44 @@ function ombuseo_schema() {
         'size' => 'medium',
         'not null' => TRUE,
       ),
+      'robots_nofollow' => array(
+        'description' => 'Boolean indicating whether nofollow meta tag should be applied.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'robots_noindex' => array(
+        'description' => 'Boolean indicating whether noindex meta tag should be applied.',
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ),
+      'og_type' => array(
+        'description' => 'Open Graph type',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'og_title' => array(
+        'description' => 'Open Graph title',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'og_description' => array(
+        'description' => 'Open Graph description',
+        'type' => 'text',
+        'size' => 'medium',
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'og_image' => array(
+        'description' => 'Open Graph image',
+        'type' => 'int',
+        'unsigned' => TRUE
+      ),
     ),
     'primary key' => array('type', 'id'),
   );
@@ -161,4 +199,63 @@ function ombuseo_update_7002() {
 
   variable_set('ombuseo_taxonomy_vocabs', $taxonomies);
 
+}
+
+
+/**
+ * Adds new fields for storing robots nolink and nofollow values
+ */
+function ombuseo_update_7003() {
+  $spec = array(
+    'description' => 'Boolean indicating whether nofollow meta tag should be applied.',
+    'type' => 'int',
+    'not null' => TRUE,
+    'default' => 0,
+  );
+
+  db_add_field('ombuseo', 'robots_nofollow', $spec, $keys_new = array());
+
+  $spec['description'] = 'Boolean indicating whether noindex meta tag should be applied.';
+
+  db_add_field('ombuseo', 'robots_noindex', $spec, $keys_new = array());
+}
+
+/**
+ * Add fields for Open Graph
+ */
+function ombuseo_update_7004() {
+
+  $fields = array(
+    'og_type' => array(
+      'description' => 'Open Graph type',
+      'type' => 'varchar',
+      'length' => 255,
+      'not null' => TRUE,
+      'default' => '',
+    ),
+    'og_title' => array(
+      'description' => 'Open Graph title',
+      'type' => 'varchar',
+      'length' => 255,
+      'not null' => TRUE,
+      'default' => '',
+    ),
+    'og_description' => array(
+      'description' => 'Open Graph description',
+      'type' => 'text',
+      'size' => 'medium',
+    ),
+    'og_image' => array(
+      'description' => 'Open Graph image',
+      'type' => 'int',
+      'unsigned' => TRUE
+    ),
+  );
+
+  foreach ($fields as $name => $field) {
+
+    db_add_field('ombuseo', $name, $field);
+  }
+  
+  
 }

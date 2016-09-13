@@ -11,6 +11,55 @@
  */
 
 /**
+ * Implements hook_init().
+ *
+ * Redirect to frontpage if viewing the full node URL.
+ * Borrowed from globalredirect.module
+ */
+function ombuseo_init() {
+  // Get the query string parameters. If none set, set to NULL
+  $query_string = drupal_get_query_parameters();
+  if (empty($query_string)) {
+    $query_string = NULL;
+  }
+
+  // Establish the language prefix that should be used, ie. the one that
+  // drupal_goto() would use
+  $options = array(
+    'fragment' => '',
+    'query' => $query_string,
+    'absolute' => FALSE,
+    'alias' => FALSE,
+    'prefix' => '',
+    'external' => FALSE,
+  );
+
+  $request_path = request_path();
+
+
+  // Allow Drupal to rewrite the URL
+  // Most commonly this will be used to invoke locale_language_url_rewrite_url().
+  // Via the locale_url_outbound_alter() implementation of hook_url_outbound_alter().
+  // NOTE: We use $request_path here as current_path() is $_GET['q'] which gets
+  //       altered by core, whereas $request_path is untouched
+  drupal_alter('url_outbound', $request_path, $options, $request_path);
+
+  // Extract the prefix from the options.
+  $prefix = rtrim($options['prefix'], '/');
+  if (drupal_is_front_page()) {
+    // Redirect if the current request does not refer to the front page in the
+    // configured fashion (with or without a prefix)
+    if (request_path() != $prefix) {
+      $query_string = drupal_get_query_parameters();
+      drupal_goto('', $options, 301);
+    }
+    // If we've got to this point then we're on a front page with a VALID
+    // request path (such as a language-prefix front page such as '/de')
+    return;
+  }
+}
+
+/**
  * Implements hook_menu().
  */
 function ombuseo_menu() {
@@ -22,7 +71,22 @@ function ombuseo_menu() {
     'access arguments' => array('configure ombuseo'),
     'page callback' => 'drupal_get_form',
     'page arguments' => array('ombuseo_settings_form'),
+    'weight' => 4,
   );
+
+
+
+  if (module_exists('ombutranslation')) {
+    $items['admin/dashboard/locale/open-graph'] = array(
+      'type' => MENU_LOCAL_TASK,
+      'title' => 'Open Graph Locale Settings',
+      'description' => 'Set Open Graph locales',
+      'access arguments' => array('configure ombuseo'),
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('ombuseo_open_graph_locale_settings_form'),
+      'weight' => 6,
+    );
+  }
 
   return $items;
 }
@@ -197,6 +261,108 @@ function ombuseo_metadata_form($form, $form_state, $type, $id, $system_form = FA
     '#type' => 'textarea',
     '#default_value' => $ombuseo->meta_keywords,
   );
+  $form['ombuseo']['robots_nofollow'] = array(
+    '#title' => 'Robots nofollow',
+    '#description' => 'Check to tell search engine robots to not follow any links in this content.',
+    '#type' => 'checkbox',
+    '#default_value' => $ombuseo->robots_nofollow,
+  );
+  $form['ombuseo']['robots_noindex'] = array(
+    '#title' => 'Robots noindex',
+    '#description' => 'Check to disallow search engines from showing this page in their results.',
+    '#type' => 'checkbox',
+    '#default_value' => $ombuseo->robots_noindex,
+  );
+
+
+  if (isset($form_state['node']) && in_array($form_state['node']->type, variable_get('ombuseo_open_graph_node_types', array()), TRUE)) {
+    $form['ombuseo']['og_type'] = array(
+      '#title' => 'Open Graph Type',
+      '#type' => 'select',
+      '#options' => array(
+        'article' => 'Article',
+        'place' => 'Place',
+        'video' => 'Video',
+        'book' => 'Book',
+        'profile' => 'Profile',
+        'website' => 'Website'
+      ),
+      '#default_value' => $ombuseo->og_type
+    );
+
+    $form['ombuseo']['og_title'] = array(
+      '#title' => 'Open Graph Title',
+      '#description' => 'Enter the Open Graph title for this content.',
+      '#type' => 'textfield',
+      '#default_value' => $ombuseo->og_title,
+    );
+    $form['ombuseo']['og_description'] = array(
+      '#title' => 'Open Graph Description',
+      '#description' => 'Enter the Open Graph description for this content.',
+      '#type' => 'textarea',
+      '#default_value' => $ombuseo->og_description,
+    );
+    $form['ombuseo']['og_image'] = array(
+      '#title' => 'Open Graph Image',
+      '#description' => 'Set the Open Graph Image',
+      '#type' => 'ombumedia',
+      '#media_options' => array(
+        'global' => array(
+          'types' => array('image' => 'image'),
+          'view_modes' => array('image' => array('default')),
+          'schemes' => array('public' => 'public'),
+          'file_extensions' => 'png gif jpg jpeg',
+          'uri_scheme' => 'public',
+        ),
+      ),
+      '#default_value' => array('fid' => $ombuseo->og_image),
+    );
+  }
+
+
+  if (isset($form_state['node']) && in_array($form_state['node']->type, variable_get('ombuseo_open_graph_node_types', array()), TRUE)) {
+    $form['ombuseo']['og_type'] = array(
+      '#title' => 'Open Graph Type',
+      '#type' => 'select',
+      '#options' => array(
+        'article' => 'Article',
+        'place' => 'Place',
+        'video' => 'Video',
+        'book' => 'Book',
+        'profile' => 'Profile',
+        'website' => 'Website'
+      ),
+      '#default_value' => $ombuseo->og_type
+    );
+
+    $form['ombuseo']['og_title'] = array(
+      '#title' => 'Open Graph Title',
+      '#description' => 'Enter the Open Graph title for this content.',
+      '#type' => 'textfield',
+      '#default_value' => $ombuseo->og_title,
+    );
+    $form['ombuseo']['og_description'] = array(
+      '#title' => 'Open Graph Description',
+      '#description' => 'Enter the Open Graph description for this content.',
+      '#type' => 'textarea',
+      '#default_value' => $ombuseo->og_description,
+    );
+    $form['ombuseo']['og_image'] = array(
+      '#title' => 'Open Graph Image',
+      '#description' => 'Set the Open Graph Image',
+      '#type' => 'ombumedia',
+      '#media_options' => array(
+        'global' => array(
+          'types' => array('image' => 'image'),
+          'view_modes' => array('image' => array('default')),
+          'schemes' => array('public' => 'public'),
+          'file_extensions' => 'png gif jpg jpeg',
+          'uri_scheme' => 'public',
+        ),
+      ),
+      '#default_value' => array('fid' => $ombuseo->og_image),
+    );
+  }
 
   if ($system_form) {
     $form['#submit'][] = 'ombuseo_metadata_form_submit';
@@ -227,6 +393,22 @@ function ombuseo_metadata_form_submit($form, &$form_state) {
         break;
     }
   }
+
+  if (isset($form_state['values']['ombuseo']['og_image'])) {
+    $form_state['values']['ombuseo']['og_image'] = $form_state['values']['ombuseo']['og_image']['fid'];
+  }
+
+  $form_state['values']['ombuseo'] += array(
+    'meta_title' => '',
+    'meta_description' => '',
+    'meta_keywords' => '',
+    'og_type' => '',
+    'og_title' => '',
+    'og_description' => '',
+    'og_image' => 0
+  );
+
+
   ombuseo_save((object) $form_state['values']['ombuseo']);
 }
 
@@ -241,7 +423,7 @@ function ombuseo_get_current_seo() {
     if (drupal_match_path(current_path(), variable_get('ombuseo_path', ''))) {
       $ombuseo = ombuseo_load('path', current_path());
     }
-    elseif (($node = menu_get_object()) && in_array($node->type, variable_get('ombuseo_node_types', array()), TRUE)) {
+    elseif (($node = menu_get_object()) && (in_array($node->type, variable_get('ombuseo_node_types', array()) , TRUE)  || in_array($node->type, variable_get('ombuseo_open_graph_node_types', array()) , TRUE) ) ) {
       $ombuseo = ombuseo_load('node', $node->nid);
     }
     elseif (($term = menu_get_object('taxonomy_term', 2)) && in_array($term->vocabulary_machine_name, variable_get('ombuseo_taxonomy_vocabs', array()), TRUE)) {
@@ -296,7 +478,142 @@ function ombuseo_preprocess_page(&$variables) {
       );
       drupal_add_html_head($meta_keywords, 'meta_keywords');
     }
+
+
+    if (!empty($ombuseo->robots_nofollow)) {
+      $robots_nofollow = array(
+        '#type' => 'html_tag',
+        '#tag' => 'meta',
+        '#attributes' => array(
+          'name' => 'robots',
+          'content' => 'nofollow',
+        ),
+      );
+      drupal_add_html_head($robots_nofollow, 'robots_nofollow');
+    }
+    if (!empty($ombuseo->robots_noindex)) {
+      $robots_noindex = array(
+        '#type' => 'html_tag',
+        '#tag' => 'meta',
+        '#attributes' => array(
+          'name' => 'robots',
+          'content' => 'noindex',
+        ),
+      );
+      drupal_add_html_head($robots_noindex, 'robots_noindex');
+    }
+
+    if (isset($node->type) && $ombuseo->type == 'node' && ($node = node_load($ombuseo->id)) && in_array($node->type, variable_get('ombuseo_open_graph_node_types', array()), TRUE)) {
+      global $base_url;
+
+      $og_url = array(
+        '#type' => 'html_tag',
+        '#tag' => 'meta',
+        '#attributes' => array(
+          'property' => 'og:url',
+          'content' => $base_url . request_uri()
+        ),
+      );
+      drupal_add_html_head($og_url, 'open_graph_type_meta');
+
+
+      if (module_exists('ombutranslation')) {
+        global $language;
+
+        foreach (ombutranslation_get_locales() as $locale) {
+          if ($locale->status) {
+            if ($language->prefix == $locale->locale) {
+              if ($og_locale_code = variable_get('ombuseo_open_graph_locale_' . $locale->locale)) {
+                $og_locale = array(
+                  '#type' => 'html_tag',
+                  '#tag' => 'meta',
+                  '#attributes' => array(
+                    'property' => 'og:locale',
+                    'content' => $og_locale_code
+                  ),
+                );
+                drupal_add_html_head($og_locale, 'open_graph_active_locale_meta');
+              }
+            }
+            else {
+              if ($og_locale_code = variable_get('ombuseo_open_graph_locale_' . $locale->locale)) {
+                $og_locale = array(
+                  '#type' => 'html_tag',
+                  '#tag' => 'meta',
+                  '#attributes' => array(
+                    'property' => 'og:locale:alternate',
+                    'content' => $og_locale_code
+                  ),
+                );
+                drupal_add_html_head($og_locale, 'open_graph_alternate_locale_meta_' . $og_locale_code);
+              }
+            }
+          }
+        }
+      }
+
+
+      
+      if (!empty($ombuseo->og_type)) {
+        $og_type = array(
+          '#type' => 'html_tag',
+          '#tag' => 'meta',
+          '#attributes' => array(
+            'property' => 'og:type',
+            'content' => $ombuseo->og_type,
+          ),
+        );
+        drupal_add_html_head($og_type, 'open_graph_type_meta');
+      }
+
+      if (!empty($ombuseo->og_title)) {
+        $og_title = array(
+          '#type' => 'html_tag',
+          '#tag' => 'meta',
+          '#attributes' => array(
+            'property' => 'og:title',
+            'content' => $ombuseo->og_title,
+          ),
+        );
+        drupal_add_html_head($og_title, 'open_graph_title_meta');
+      }
+
+      if (!empty($ombuseo->og_description)) {
+        $og_description = array(
+          '#type' => 'html_tag',
+          '#tag' => 'meta',
+          '#attributes' => array(
+            'property' => 'og:description',
+            'content' => $ombuseo->og_description,
+          ),
+        );
+        drupal_add_html_head($og_description, 'open_graph_description_meta');
+      }
+
+
+      if (!empty($ombuseo->og_image)) {
+        
+        $file = file_load($ombuseo->og_image);
+        
+        $og_image = array(
+          '#type' => 'html_tag',
+          '#tag' => 'meta',
+          '#attributes' => array(
+            'property' => 'og:image',
+            'content' => file_create_url($file->uri),
+          ),
+        );
+        drupal_add_html_head($og_image, 'open_graph_image_meta');
+      }
+      
+    }
   }
+
+
+}
+
+function ombuseo_get_open_graph_locales() {
+  ombutranslation_get_locales();
 }
 
 /**
@@ -306,6 +623,22 @@ function ombuseo_preprocess_html(&$variables) {
   $ombuseo = ombuseo_get_current_seo();
   if (!empty($ombuseo->meta_title)) {
     $variables['head_title'] =  $ombuseo->meta_title . ' | ' . variable_get('site_name', 'Drupal');
+  }
+}
+
+/**
+ * Implements hook_profile_tasks_settings_alter().
+ *
+ * Enable xmlsitemap for all content types.
+ */
+function ombuseo_profile_tasks_settings_alter($type, &$settings) {
+  switch ($type) {
+    case 'content_types':
+      $settings['node_settings']['defaults']['xmlsitemap_settings_node_[type]'] = array(
+        'status' => '1',
+        'priority' => '0.5',
+      );
+      break;
   }
 }
 
@@ -324,6 +657,15 @@ function ombuseo_settings_form() {
     '#default_value' => variable_get('ombuseo_node_types', array()),
     '#description' => t('Select the node types to use OMBU SEO.')
   );
+
+  $form['ombuseo_open_graph_node_types'] = array(
+    '#title' => t('Open Graph settings'),
+    '#type' => 'checkboxes',
+    '#options' => $node_types,
+    '#default_value' => variable_get('ombuseo_open_graph_node_types', array()),
+    '#description' => t('Select the node types to use Open Graph with.')
+  );
+
 
   $vocabs = array();
   foreach (taxonomy_get_vocabularies() as $vocab) {
@@ -366,6 +708,58 @@ function ombuseo_settings_form() {
   return system_settings_form($form);
 }
 
+
+function ombuseo_open_graph_locale_settings_form() {
+
+  $form[] = array();
+
+  $locales = ombutranslation_get_locales();
+
+  $open_graph_locales = ombuseo_open_graph_locales();
+
+  foreach ($locales as $locale) {
+    $form['ombuseo_open_graph_locale_' . $locale->locale] = array(
+      '#title' => $locale->label,
+      '#type' => 'select',
+      '#options' => $open_graph_locales,
+      '#default_value' => variable_get('ombuseo_open_graph_locale_' . $locale->locale)
+
+    );
+
+  }
+
+  return system_settings_form($form);
+}
+
+function ombuseo_open_graph_locales() {
+  
+  if ($cache = cache_get('open_graph_locales')) {
+    return $cache->data;
+  }
+
+  $response = drupal_http_request('https://www.facebook.com/translations/FacebookLocales.xml');
+
+  if ($response->code == "200") {
+    $xml = simplexml_load_string($response->data, "SimpleXMLElement", LIBXML_NOCDATA);
+    $json = json_encode($xml);
+    $array = json_decode($json,TRUE);
+
+    $options = array();
+
+    foreach ($array['locale'] as $locale) {
+      $options[$locale['codes']['code']['standard']['representation']] = $locale['englishName'];
+    }
+
+    cache_set('open_graph_locales',$options);
+    return $options;
+  }
+
+  drupal_set_message('Unable to load locale options from facebook.com/translations/FacebookLocales.xml');
+  return array();
+}
+
+
+
 /**
  * Submit handler for ombuseo_mdedata_form().
  */
@@ -395,6 +789,12 @@ function ombuseo_load($type, $id) {
       'meta_title' => '',
       'meta_description' => '',
       'meta_keywords' => '',
+      'robots_nofollow' => '',
+      'robots_noindex' => '',
+      'og_type' => '',
+      'og_title' => '',
+      'og_description' => '',
+      'og_image' => ''
     );
   }
   return $row;
@@ -413,6 +813,13 @@ function ombuseo_save(stdClass $ombuseo) {
       'meta_title' => $ombuseo->meta_title,
       'meta_description' => $ombuseo->meta_description,
       'meta_keywords' => $ombuseo->meta_keywords,
+
+      'robots_nofollow' => $ombuseo->robots_nofollow,
+      'robots_noindex' => $ombuseo->robots_noindex,
+      'og_type' => $ombuseo->og_type,
+      'og_title' => $ombuseo->og_title,
+      'og_description' => $ombuseo->og_description,
+      'og_image' => $ombuseo->og_image
     ))
       ->execute();
   }
@@ -460,4 +867,15 @@ function ombuseo_get_view_arguments($view, $display) {
   }
 
   return $arguments;
+}
+
+/**
+ * Implements hook_xmlsitemap_link_alter().
+ *
+ * Don't index homepage node, since it is already being indexed as "frontpage".
+ */
+function ombuseo_xmlsitemap_link_alter(&$link) {
+  if ($link['loc'] == variable_get('site_frontpage', '')) {
+    $link['status'] = 0;
+  }
 }
