@@ -792,6 +792,7 @@ function ombuseo_load($type, $id) {
   ))->fetchObject();
   if (!$row) {
     $row = (object) array(
+      'type' => '',
       'meta_title' => '',
       'meta_description' => '',
       'meta_keywords' => '',
